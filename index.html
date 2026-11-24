@@ -310,7 +310,7 @@
       <div class="counter-row">
         <div>
           <div class="counter-title">Anak</div>
-          <div class="counter-sub" id="kid-sub">umur 3 tahun - 17 tahun</div>
+          <div class="counter-sub" id="kid-sub">Umur 3 tahun - 17 tahun</div>
         </div>
         <div class="stepper">
           <button type="button" id="kid-minus" onclick="changeCount('kid', -1)" aria-label="Kurangi anak">−</button>
@@ -923,7 +923,7 @@ function renderCounts() {
   document.getElementById('kid-minus').disabled    = KIDS <= 0 || (KIDS === 1 && ADULTS === 0);
   document.getElementById('kid-plus').disabled     = KIDS >= MAX_KIDS;
   document.getElementById('adult-sub').textContent = 'Orang tua / pendamping';
-  document.getElementById('kid-sub').textContent   = 'umur ' + MIN_KID_AGE + ' - ' + MAX_KID_AGE + 'thn';
+  document.getElementById('kid-sub').textContent   = 'Umur ' + MIN_KID_AGE + ' tahun - ' + MAX_KID_AGE + ' tahun';
 }
 
 function changeCount(type, delta) {
