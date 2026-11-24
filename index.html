@@ -303,7 +303,7 @@
         </div>
         <div class="stepper">
           <button type="button" id="adult-minus" onclick="changeCount('adult', -1)" aria-label="Kurangi dewasa">−</button>
-          <span class="stepper-num" id="adult-num">1</span>
+          <span class="stepper-num" id="adult-num">0</span>
           <button type="button" id="adult-plus" onclick="changeCount('adult', 1)" aria-label="Tambah dewasa">+</button>
         </div>
       </div>
@@ -314,7 +314,7 @@
         </div>
         <div class="stepper">
           <button type="button" id="kid-minus" onclick="changeCount('kid', -1)" aria-label="Kurangi anak">−</button>
-          <span class="stepper-num" id="kid-num">0</span>
+          <span class="stepper-num" id="kid-num">1</span>
           <button type="button" id="kid-plus" onclick="changeCount('kid', 1)" aria-label="Tambah anak">+</button>
         </div>
       </div>
@@ -894,7 +894,7 @@ function selectTicket(type) {
 //  Langkah 1: pilih jumlah dewasa dan anak. Langkah 2: formulir dibuat sesuai jumlah itu.
 //  Batas jumlah (MAX_ADULTS, MAX_KIDS) diatur hanya di Code.gs dan dibaca dari server.
 // ============================================================
-let ADULTS = 1, KIDS = 0;
+let ADULTS = 0, KIDS = 1;   // bawaan: 1 anak, 0 dewasa (anak kadang datang tanpa pendamping)
 let MAX_ADULTS = 5, MAX_KIDS = 10;
 let MIN_KID_AGE = 3, MAX_KID_AGE = 17;   // usia anak, dari server (Code.gs)
 let EVENT_DATE_ISO = '';                 // tanggal acara TTTT-BB-HH, dari server (Code.gs)
@@ -917,23 +917,25 @@ function applyRegMode() {
 function renderCounts() {
   document.getElementById('adult-num').textContent = ADULTS;
   document.getElementById('kid-num').textContent   = KIDS;
-  document.getElementById('adult-minus').disabled  = ADULTS <= 1;
+  // Total minimal 1 orang: tombol kurang dimatikan kalau akan membuat total jadi 0
+  document.getElementById('adult-minus').disabled  = ADULTS <= 0 || (ADULTS === 1 && KIDS === 0);
   document.getElementById('adult-plus').disabled   = ADULTS >= MAX_ADULTS;
-  document.getElementById('kid-minus').disabled    = KIDS <= 0;
+  document.getElementById('kid-minus').disabled    = KIDS <= 0 || (KIDS === 1 && ADULTS === 0);
   document.getElementById('kid-plus').disabled     = KIDS >= MAX_KIDS;
-  document.getElementById('adult-sub').textContent = 'Orang tua / pendamping (minimal 1, maksimal ' + MAX_ADULTS + ')';
+  document.getElementById('adult-sub').textContent = 'Orang tua / pendamping';
   document.getElementById('kid-sub').textContent   = 'umur ' + MIN_KID_AGE + ' - ' + MAX_KID_AGE + 'thn';
 }
 
 function changeCount(type, delta) {
-  if (type === 'adult') ADULTS = Math.min(MAX_ADULTS, Math.max(1, ADULTS + delta));
+  if (type === 'adult') ADULTS = Math.min(MAX_ADULTS, Math.max(0, ADULTS + delta));
   else                  KIDS   = Math.min(MAX_KIDS,   Math.max(0, KIDS + delta));
+  if (ADULTS + KIDS < 1) { if (type === 'adult') ADULTS = 1; else KIDS = 1; }
   clearAlert('count-alert');
   renderCounts();
 }
 
 function goToForm() {
-  if (ADULTS < 1) { showAlert('count-alert', 'Minimal 1 orang dewasa.', 'error'); return; }
+  if (ADULTS + KIDS < 1) { showAlert('count-alert', 'Minimal 1 orang harus didaftarkan.', 'error'); return; }
   if (ADULTS + KIDS > REMAINING) {
     showAlert('count-alert', '⚠️ Sisa kuota tinggal ' + Math.max(REMAINING, 0) + ' orang. Kurangi jumlah yang didaftarkan.', 'warning'); return;
   }
@@ -964,32 +966,22 @@ function backToCounts() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Usia (tahun penuh) pada tanggal acuan; kedua tanggal berformat TTTT-BB-HH
-function ageAt(dobIso, refIso) {
-  const b = dobIso.split('-').map(Number), r = refIso.split('-').map(Number);
-  let age = r[0] - b[0];
-  if (r[1] < b[1] || (r[1] === b[1] && r[2] < b[2])) age--;
-  return age;
-}
-function isoDate(y, m, d) { return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
-// Batas tanggal lahir pada kolom tanggal: anak termuda dan tertua pada hari acara
-function dobLimits() {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(EVENT_DATE_ISO)) return '';
-  const [y, m, d] = EVENT_DATE_ISO.split('-').map(Number);
-  const maxD = isoDate(y - MIN_KID_AGE, m, d);                                       // paling muda: genap usia minimal pada hari acara
-  const minD = new Date(Date.UTC(y - MAX_KID_AGE - 1, m - 1, d + 1)).toISOString().slice(0, 10); // paling tua: belum genap usia maksimal + 1
-  return ' min="' + minD + '" max="' + maxD + '"';
+// Tanggal lahir tidak boleh setelah hari acara (usia anak tidak dibatasi)
+function dobMax() {
+  return /^\d{4}-\d{2}-\d{2}$/.test(EVENT_DATE_ISO) ? ' max="' + EVENT_DATE_ISO + '"' : '';
 }
 
 // Membuat kolom isian: satu kotak untuk setiap dewasa dan setiap anak
 function buildPersonForms() {
-  document.getElementById('group-summary-text').textContent =
-    ADULTS + ' dewasa' + (KIDS > 0 ? ', ' + KIDS + ' anak' : '') + '  •  Total ' + (ADULTS + KIDS) + ' orang';
+  const parts = [];
+  if (ADULTS > 0) parts.push(ADULTS + ' dewasa');
+  if (KIDS   > 0) parts.push(KIDS + ' anak');
+  document.getElementById('group-summary-text').textContent = parts.join(', ') + '  •  Total ' + (ADULTS + KIDS) + ' orang';
 
-  let a = '<div class="form-section-title">Data Dewasa</div>';
+  let a = ADULTS > 0 ? '<div class="form-section-title">Data Dewasa</div>' : '';
   for (let i = 0; i < ADULTS; i++) {
     a += '<div class="person-box">' +
-      '<div class="person-box-title">Dewasa ' + (i + 1) + (i === 0 ? ' (pendaftar)' : '') + '</div>' +
+      '<div class="person-box-title">Dewasa ' + (i + 1) + '</div>' +
       '<div class="field"><label>Nama Lengkap *</label>' +
       '<input type="text" id="adult-name-' + i + '" placeholder="Masukkan nama lengkap" maxlength="100" value="' + esc(adultVals[i] || '') + '"></div>' +
       '</div>';
@@ -1012,7 +1004,7 @@ function buildPersonForms() {
         '<div class="field"><label>Kelas *</label>' +
         '<input type="text" id="kid-class-' + i + '" placeholder="Contoh: 3 SD" maxlength="30" value="' + esc(v.kelas) + '"></div>' +
         '<div class="field"><label>Tanggal Lahir *</label>' +
-        '<input type="date" id="kid-dob-' + i + '"' + dobLimits() + ' value="' + esc(v.lahir) + '"></div>' +
+        '<input type="date" id="kid-dob-' + i + '"' + dobMax() + ' value="' + esc(v.lahir) + '"></div>' +
         '<div class="field"><label>Catatan untuk Panitia <span class="opt">(opsional)</span></label>' +
         '<input type="text" id="kid-note-' + i + '" placeholder="Contoh: alergi makanan" maxlength="200" value="' + esc(v.catatan) + '"></div>' +
         '</div>';
@@ -1055,11 +1047,8 @@ async function submitGroup() {
     if (!sekolah)   { showAlert('group-alert', 'Nama Sekolah ' + no + ' wajib diisi.', 'error'); return; }
     if (!kelas)     { showAlert('group-alert', 'Kelas ' + no + ' wajib diisi.', 'error'); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(lahir)) { showAlert('group-alert', 'Tanggal Lahir ' + no + ' wajib diisi.', 'error'); return; }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(EVENT_DATE_ISO)) {
-      const umur = ageAt(lahir, EVENT_DATE_ISO);
-      if (umur < MIN_KID_AGE || umur > MAX_KID_AGE) {
-        showAlert('group-alert', 'Tanggal Lahir ' + no + ' tidak sesuai. Pada hari acara (' + EVENT_DATE + ') usia anak harus ' + MIN_KID_AGE + ' sampai ' + MAX_KID_AGE + ' tahun.', 'error'); return;
-      }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(EVENT_DATE_ISO) && lahir > EVENT_DATE_ISO) {
+      showAlert('group-alert', 'Tanggal Lahir ' + no + ' tidak valid. Mohon periksa kembali.', 'error'); return;
     }
     kids.push({ nama, panggilan, sekolah, kelas, lahir, catatan });
   }
@@ -1130,7 +1119,7 @@ function showGroupResult(data) {
   const nA = data.people.filter(p => p.jenis === 'Dewasa').length;
   const nK = data.people.length - nA;
   document.getElementById('group-result-sub').textContent =
-    data.people.length + ' orang terdaftar (' + nA + ' dewasa' + (nK ? ', ' + nK + ' anak' : '') + ')';
+    data.people.length + ' orang terdaftar (' + [nA ? nA + ' dewasa' : '', nK ? nK + ' anak' : ''].filter(Boolean).join(', ') + ')';
   applyRegMode();
   document.getElementById('group-result').style.display = 'block';
   setTimeout(() => document.getElementById('group-result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -1359,7 +1348,7 @@ function resetForm() {
   document.getElementById('qrcode-main').innerHTML = '';
   clearAlert('form-alert');
   // Pendaftaran dewasa + anak: kembali ke langkah 1 dengan isian kosong
-  groupData = null; groupStep = 1; ADULTS = 1; KIDS = 0; adultVals = []; kidVals = [];
+  groupData = null; groupStep = 1; ADULTS = 0; KIDS = 1; adultVals = []; kidVals = [];
   ['g-phone','g-phone2','g-kota','g-pd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('group-result').style.display = 'none';
   document.getElementById('group-people').innerHTML = '';
