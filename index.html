@@ -154,6 +154,29 @@
   .res-name { font-size: 1rem; font-weight: 700; color: var(--text); }
   .res-detail { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; margin-bottom: 1rem; }
 
+  /* GROUP REGISTRATION (dewasa + anak) */
+  .step-title { font-size: 1.05rem; font-weight: 800; color: var(--green-dark); margin-bottom: 0.3rem; }
+  .step-intro { font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1.1rem; line-height: 1.6; }
+  .counter-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border: 1.5px solid #EBCDBE; border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.7rem; }
+  .counter-title { font-weight: 800; font-size: 1.02rem; }
+  .counter-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+  .stepper { display: flex; align-items: center; gap: 0.6rem; }
+  .stepper button { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--green); background: white; color: var(--green-dark); font-size: 1.5rem; font-weight: 700; cursor: pointer; line-height: 1; padding: 0; }
+  .stepper button:hover { background: var(--green-light); }
+  .stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .stepper-num { min-width: 2rem; text-align: center; font-size: 1.5rem; font-weight: 800; }
+  .group-summary { background: var(--green-light); border: 1.5px solid #F0C4B5; border-radius: 10px; padding: 0.7rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 700; color: var(--green-dark); }
+  .link-btn { background: none; border: none; color: var(--green); font-weight: 700; font-size: 0.82rem; text-decoration: underline; cursor: pointer; white-space: nowrap; }
+  .form-section-title { font-size: 0.8rem; font-weight: 800; color: var(--green-dark); text-transform: uppercase; letter-spacing: 0.5px; margin: 1.3rem 0 0.6rem; padding-bottom: 0.35rem; border-bottom: 2px solid #F3DDD0; }
+  .person-box { border: 1.5px solid #F3DDD0; background: #FFFAF6; border-radius: 12px; padding: 0.9rem 1rem 0.2rem; margin-bottom: 0.8rem; }
+  .person-box-title { font-weight: 800; font-size: 0.9rem; margin-bottom: 0.65rem; }
+  .group-result { display: none; background: white; border-radius: 16px; border: 2px solid var(--green); overflow: hidden; margin-top: 1.25rem; }
+  .person-card { border: 2px solid var(--green); border-radius: 14px; overflow: hidden; margin-bottom: 1rem; background: white; break-inside: avoid; page-break-inside: avoid; }
+  .person-card-head { background: var(--green-dark); color: white; padding: 0.75rem 1.1rem; text-align: center; font-weight: 700; font-size: 1rem; }
+  .person-card-body { padding: 1rem 0.5rem 0.25rem; text-align: center; }
+  .badge-adult { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+  .badge-kid   { background: #fff8e1; color: #f57f17; border: 1px solid #ffcc02; }
+
   /* LOOKUP TAB */
   .lookup-wrap { background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid #F3DDD0; }
   .lookup-wrap h3 { font-size: 1rem; font-weight: 700; color: var(--green-dark); margin-bottom: 0.3rem; }
@@ -231,6 +254,13 @@
     .action-row, .reset-btn { display: none !important; }
     .lq-card, .lq-card * { visibility: visible; }
     .lq-card { position: fixed; top: 0; left: 0; width: 100%; }
+    /* Cetak QR pendaftaran keluarga: hanya daftar QR yang dicetak, bisa lebih dari satu halaman */
+    body.print-group * { visibility: visible; }
+    body.print-group > img, body.print-group .header, body.print-group .tabs, body.print-group .footer,
+    body.print-group #form-card, body.print-group #count-card, body.print-group #group-card, body.print-group #payment-card,
+    body.print-group .inline-result, body.print-group #tab-cari, body.print-group #tab-scan,
+    body.print-group #config-error, body.print-group .group-actions { display: none !important; }
+    body.print-group #group-result { border: none; margin: 0; }
   }
 </style>
 </head>
@@ -260,7 +290,72 @@
 
   <!-- ═══ TAB 1: PENDAFTARAN ═══ -->
   <div id="tab-daftar">
-    <div class="card" id="form-card">
+    <div id="config-error"></div>
+
+    <!-- LANGKAH 1 (acara gratis): berapa dewasa dan anak yang didaftarkan -->
+    <div class="card" id="count-card" style="display:none">
+      <div class="step-title">Siapa saja yang akan didaftarkan?</div>
+      <div class="step-intro">Isi jumlah dewasa dan jumlah anak yang akan ikut. Formulir akan menyesuaikan jawaban Anda.</div>
+      <div class="counter-row">
+        <div>
+          <div class="counter-title">Dewasa</div>
+          <div class="counter-sub" id="adult-sub">Orang tua / pendamping</div>
+        </div>
+        <div class="stepper">
+          <button type="button" id="adult-minus" onclick="changeCount('adult', -1)" aria-label="Kurangi dewasa">−</button>
+          <span class="stepper-num" id="adult-num">1</span>
+          <button type="button" id="adult-plus" onclick="changeCount('adult', 1)" aria-label="Tambah dewasa">+</button>
+        </div>
+      </div>
+      <div class="counter-row">
+        <div>
+          <div class="counter-title">Anak</div>
+          <div class="counter-sub" id="kid-sub">umur 3 - 17thn</div>
+        </div>
+        <div class="stepper">
+          <button type="button" id="kid-minus" onclick="changeCount('kid', -1)" aria-label="Kurangi anak">−</button>
+          <span class="stepper-num" id="kid-num">0</span>
+          <button type="button" id="kid-plus" onclick="changeCount('kid', 1)" aria-label="Tambah anak">+</button>
+        </div>
+      </div>
+      <div id="count-alert"></div>
+      <button class="btn-primary" onclick="goToForm()">Lanjut →</button>
+    </div>
+
+    <!-- LANGKAH 2 (acara gratis): formulir sesuai jumlah dewasa dan anak -->
+    <div class="card" id="group-card" style="display:none">
+      <div class="group-summary">
+        <span id="group-summary-text"></span>
+        <button type="button" class="link-btn" onclick="backToCounts()">Ubah jumlah</button>
+      </div>
+
+      <div class="form-section-title">Kontak Pendaftar</div>
+      <div class="field">
+        <label>Nomor WhatsApp / HP *</label>
+        <input type="tel" id="g-phone" placeholder="Contoh: 08123456789" maxlength="20" autocomplete="tel">
+      </div>
+      <div class="field">
+        <label>Konfirmasi Nomor WhatsApp *</label>
+        <input type="tel" id="g-phone2" placeholder="Ulangi nomor WhatsApp Anda" maxlength="20" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Kota Asal *</label>
+        <input type="text" id="g-kota" placeholder="Contoh: Yogyakarta, Jakarta, Surabaya" maxlength="100">
+      </div>
+      <div class="field">
+        <label>Paroki / Persekutuan Doa <span class="opt">(opsional)</span></label>
+        <input type="text" id="g-pd" placeholder="Nama persekutuan doa Anda" maxlength="100">
+      </div>
+
+      <div id="adult-forms"></div>
+      <div id="kid-forms"></div>
+
+      <div id="group-alert"></div>
+      <button class="btn-primary" id="group-submit-btn" onclick="submitGroup()">Daftar Sekarang →</button>
+    </div>
+
+    <!-- Formulir satu orang (dipakai hanya untuk acara berbayar) -->
+    <div class="card" id="form-card" style="display:none">
       <div class="field">
         <label>Nama Lengkap *</label>
         <input type="text" id="nama" placeholder="Masukkan nama lengkap" maxlength="100" autocomplete="name">
@@ -311,6 +406,23 @@
       </div>-->
       <div id="form-alert"></div>
       <button class="btn-primary" id="submit-btn" onclick="submitForm()">Daftar Sekarang →</button>
+    </div>
+
+    <!-- HASIL PENDAFTARAN KELUARGA — satu QR untuk setiap orang -->
+    <div class="group-result" id="group-result">
+      <div class="ir-header">
+        <h2>✅ Pendaftaran Berhasil!</h2>
+        <p id="group-result-sub"></p>
+      </div>
+      <div class="ir-body">
+        <p class="qr-hint" style="margin-bottom:1rem">Setiap orang punya QR Code sendiri. Screenshot atau cetak semuanya untuk absensi hari H. Naikkan kecerahan layar dan matikan mode gelap saat scan.</p>
+        <div id="group-people"></div>
+        <div class="action-row group-actions">
+          <button class="wa-btn" onclick="shareGroupWA()">📤 Kirim ke WhatsApp Saya</button>
+          <button class="print-btn" onclick="printGroup()">🖨️ Cetak Semua</button>
+          <button class="reset-btn" onclick="resetForm()">← Daftar Lagi</button>
+        </div>
+      </div>
     </div>
 
     <!-- PAYMENT INFO — muncul setelah daftar berhasil -->
@@ -700,6 +812,18 @@ async function loadQuota() {
     if (signature !== uiSignature) { buildTicketUI(data); uiSignature = signature; }
     applyFreeEventMode();
 
+    // Batas dewasa/anak per pendaftaran dan sisa kuota total dibaca dari server (Code.gs)
+    if (Number(data.maxAdults) > 0) MAX_ADULTS = Number(data.maxAdults);
+    if (Number(data.maxKids)   >= 0) MAX_KIDS   = Number(data.maxKids);
+    if (Number(data.minKidAge) > 0) MIN_KID_AGE = Number(data.minKidAge);
+    if (Number(data.maxKidAge) > 0) MAX_KID_AGE = Number(data.maxKidAge);
+    if (data.eventDateIso) EVENT_DATE_ISO = String(data.eventDateIso);
+    REMAINING = (Number(data.max) || 0) - (Number(data.total) || 0);
+    ADULTS = Math.min(ADULTS, MAX_ADULTS);
+    KIDS   = Math.min(KIDS, MAX_KIDS);
+    renderCounts();
+    applyRegMode();
+
     // Awalan nomor registrasi ditentukan di Code.gs (ID_PREFIX); contoh di kolom isian dibuat dari sini
     if (data.idPrefix) applyIdPrefix(String(data.idPrefix));
 
@@ -732,6 +856,7 @@ async function loadQuota() {
     if (!uiSignature) {
       const tl = document.getElementById('ticket-loading');
       if (tl) tl.textContent = 'Kategori tiket tidak dapat dimuat. Periksa koneksi internet, lalu muat ulang halaman.';
+      showAlert('config-error', '❌ Formulir tidak dapat dimuat. Periksa koneksi internet, lalu muat ulang halaman.', 'error');
     }
   } finally {
     // Tampilkan bagian yang disembunyikan selama menunggu server, hanya kalau kategori berhasil dimuat
@@ -763,6 +888,273 @@ function selectTicket(type) {
     if (inp) inp.checked = (t === type);
   });
 }*/
+
+// ============================================================
+//  PENDAFTARAN DEWASA + ANAK (acara gratis)
+//  Langkah 1: pilih jumlah dewasa dan anak. Langkah 2: formulir dibuat sesuai jumlah itu.
+//  Batas jumlah (MAX_ADULTS, MAX_KIDS) diatur hanya di Code.gs dan dibaca dari server.
+// ============================================================
+let ADULTS = 1, KIDS = 0;
+let MAX_ADULTS = 5, MAX_KIDS = 10;
+let MIN_KID_AGE = 3, MAX_KID_AGE = 17;   // usia anak, dari server (Code.gs)
+let EVENT_DATE_ISO = '';                 // tanggal acara TTTT-BB-HH, dari server (Code.gs)
+let REMAINING  = Infinity;   // sisa kuota total, dari server
+let groupStep  = 1;          // 1 = pilih jumlah, 2 = isi formulir
+let groupData  = null;       // hasil pendaftaran terakhir
+let adultVals  = [];         // isian nama dewasa, disimpan saat kembali ke langkah 1
+let kidVals    = [];         // isian anak: { nama, umur, catatan }
+
+// Menampilkan kartu yang sesuai: acara gratis = langkah 1 atau 2; acara berbayar = formulir satu orang
+function applyRegMode() {
+  const showing = groupData !== null || registeredData !== null; // hasil pendaftaran sedang tampil
+  const set = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  if (showing) { set('count-card', false); set('group-card', false); set('form-card', false); return; }
+  set('count-card', FREE_EVENT && groupStep === 1);
+  set('group-card', FREE_EVENT && groupStep === 2);
+  set('form-card',  !FREE_EVENT);
+}
+
+function renderCounts() {
+  document.getElementById('adult-num').textContent = ADULTS;
+  document.getElementById('kid-num').textContent   = KIDS;
+  document.getElementById('adult-minus').disabled  = ADULTS <= 1;
+  document.getElementById('adult-plus').disabled   = ADULTS >= MAX_ADULTS;
+  document.getElementById('kid-minus').disabled    = KIDS <= 0;
+  document.getElementById('kid-plus').disabled     = KIDS >= MAX_KIDS;
+  document.getElementById('adult-sub').textContent = 'Orang tua / pendamping (minimal 1, maksimal ' + MAX_ADULTS + ')';
+  document.getElementById('kid-sub').textContent   = 'umur ' + MIN_KID_AGE + ' - ' + MAX_KID_AGE + 'thn';
+}
+
+function changeCount(type, delta) {
+  if (type === 'adult') ADULTS = Math.min(MAX_ADULTS, Math.max(1, ADULTS + delta));
+  else                  KIDS   = Math.min(MAX_KIDS,   Math.max(0, KIDS + delta));
+  clearAlert('count-alert');
+  renderCounts();
+}
+
+function goToForm() {
+  if (ADULTS < 1) { showAlert('count-alert', 'Minimal 1 orang dewasa.', 'error'); return; }
+  if (ADULTS + KIDS > REMAINING) {
+    showAlert('count-alert', '⚠️ Sisa kuota tinggal ' + Math.max(REMAINING, 0) + ' orang. Kurangi jumlah yang didaftarkan.', 'warning'); return;
+  }
+  clearAlert('count-alert');
+  buildPersonForms();
+  groupStep = 2;
+  applyRegMode();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function saveFormValues() {
+  adultVals = []; kidVals = [];
+  for (let i = 0; i < ADULTS; i++) {
+    const el = document.getElementById('adult-name-' + i);
+    adultVals.push(el ? el.value : '');
+  }
+  for (let i = 0; i < KIDS; i++) {
+    const g = f => { const el = document.getElementById('kid-' + f + '-' + i); return el ? el.value : ''; };
+    kidVals.push({ nama: g('name'), panggilan: g('nick'), sekolah: g('school'), kelas: g('class'), lahir: g('dob'), catatan: g('note') });
+  }
+}
+
+function backToCounts() {
+  saveFormValues();
+  groupStep = 1;
+  renderCounts();
+  applyRegMode();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Usia (tahun penuh) pada tanggal acuan; kedua tanggal berformat TTTT-BB-HH
+function ageAt(dobIso, refIso) {
+  const b = dobIso.split('-').map(Number), r = refIso.split('-').map(Number);
+  let age = r[0] - b[0];
+  if (r[1] < b[1] || (r[1] === b[1] && r[2] < b[2])) age--;
+  return age;
+}
+function isoDate(y, m, d) { return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
+// Batas tanggal lahir pada kolom tanggal: anak termuda dan tertua pada hari acara
+function dobLimits() {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(EVENT_DATE_ISO)) return '';
+  const [y, m, d] = EVENT_DATE_ISO.split('-').map(Number);
+  const maxD = isoDate(y - MIN_KID_AGE, m, d);                                       // paling muda: genap usia minimal pada hari acara
+  const minD = new Date(Date.UTC(y - MAX_KID_AGE - 1, m - 1, d + 1)).toISOString().slice(0, 10); // paling tua: belum genap usia maksimal + 1
+  return ' min="' + minD + '" max="' + maxD + '"';
+}
+
+// Membuat kolom isian: satu kotak untuk setiap dewasa dan setiap anak
+function buildPersonForms() {
+  document.getElementById('group-summary-text').textContent =
+    ADULTS + ' dewasa' + (KIDS > 0 ? ', ' + KIDS + ' anak' : '') + '  •  Total ' + (ADULTS + KIDS) + ' orang';
+
+  let a = '<div class="form-section-title">Data Dewasa</div>';
+  for (let i = 0; i < ADULTS; i++) {
+    a += '<div class="person-box">' +
+      '<div class="person-box-title">Dewasa ' + (i + 1) + (i === 0 ? ' (pendaftar)' : '') + '</div>' +
+      '<div class="field"><label>Nama Lengkap *</label>' +
+      '<input type="text" id="adult-name-' + i + '" placeholder="Masukkan nama lengkap" maxlength="100" value="' + esc(adultVals[i] || '') + '"></div>' +
+      '</div>';
+  }
+  document.getElementById('adult-forms').innerHTML = a;
+
+  let k = '';
+  if (KIDS > 0) {
+    k = '<div class="form-section-title">Data Anak</div>';
+    for (let i = 0; i < KIDS; i++) {
+      const v = kidVals[i] || { nama: '', panggilan: '', sekolah: '', kelas: '', lahir: '', catatan: '' };
+      k += '<div class="person-box">' +
+        '<div class="person-box-title">Anak ' + (i + 1) + '</div>' +
+        '<div class="field"><label>Nama Lengkap *</label>' +
+        '<input type="text" id="kid-name-' + i + '" placeholder="Masukkan nama lengkap anak" maxlength="100" value="' + esc(v.nama) + '"></div>' +
+        '<div class="field"><label>Nama Panggilan *</label>' +
+        '<input type="text" id="kid-nick-' + i + '" placeholder="Nama panggilan anak" maxlength="50" value="' + esc(v.panggilan) + '"></div>' +
+        '<div class="field"><label>Nama Sekolah *</label>' +
+        '<input type="text" id="kid-school-' + i + '" placeholder="Nama sekolah anak" maxlength="100" value="' + esc(v.sekolah) + '"></div>' +
+        '<div class="field"><label>Kelas *</label>' +
+        '<input type="text" id="kid-class-' + i + '" placeholder="Contoh: 3 SD" maxlength="30" value="' + esc(v.kelas) + '"></div>' +
+        '<div class="field"><label>Tanggal Lahir *</label>' +
+        '<input type="date" id="kid-dob-' + i + '"' + dobLimits() + ' value="' + esc(v.lahir) + '"></div>' +
+        '<div class="field"><label>Catatan untuk Panitia <span class="opt">(opsional)</span></label>' +
+        '<input type="text" id="kid-note-' + i + '" placeholder="Contoh: alergi makanan" maxlength="200" value="' + esc(v.catatan) + '"></div>' +
+        '</div>';
+    }
+  }
+  document.getElementById('kid-forms').innerHTML = k;
+}
+
+async function submitGroup() {
+  await configReady;
+  const phone  = document.getElementById('g-phone').value.trim();
+  const phone2 = document.getElementById('g-phone2').value.trim();
+  const kota   = document.getElementById('g-kota').value.trim();
+  const pd     = document.getElementById('g-pd').value.trim();
+
+  if (!phone) { showAlert('group-alert', 'Nomor WhatsApp / HP wajib diisi.', 'error'); return; }
+  if (!/^[0-9+\-\s]{8,20}$/.test(phone)) { showAlert('group-alert', 'Format nomor tidak valid. Gunakan angka saja.', 'error'); return; }
+  if (!phone2) { showAlert('group-alert', 'Konfirmasi nomor WhatsApp wajib diisi.', 'error'); return; }
+  if (phone.replace(/\D/g, '') !== phone2.replace(/\D/g, '')) {
+    showAlert('group-alert', '⚠️ Nomor WhatsApp tidak sama. Mohon periksa kembali.', 'error');
+    document.getElementById('g-phone2').style.borderColor = '#A32D2D';
+    return;
+  }
+  document.getElementById('g-phone2').style.borderColor = '';
+  if (!kota) { showAlert('group-alert', 'Kota asal wajib diisi.', 'error'); return; }
+
+  const adults = [];
+  for (let i = 0; i < ADULTS; i++) {
+    const nama = document.getElementById('adult-name-' + i).value.trim();
+    if (!nama) { showAlert('group-alert', 'Nama Dewasa ' + (i + 1) + ' wajib diisi.', 'error'); return; }
+    adults.push(nama);
+  }
+  const kids = [];
+  for (let i = 0; i < KIDS; i++) {
+    const g = f => document.getElementById('kid-' + f + '-' + i).value.trim();
+    const nama = g('name'), panggilan = g('nick'), sekolah = g('school'), kelas = g('class'), lahir = g('dob'), catatan = g('note');
+    const no = 'Anak ' + (i + 1);
+    if (!nama)      { showAlert('group-alert', 'Nama Lengkap ' + no + ' wajib diisi.', 'error'); return; }
+    if (!panggilan) { showAlert('group-alert', 'Nama Panggilan ' + no + ' wajib diisi.', 'error'); return; }
+    if (!sekolah)   { showAlert('group-alert', 'Nama Sekolah ' + no + ' wajib diisi.', 'error'); return; }
+    if (!kelas)     { showAlert('group-alert', 'Kelas ' + no + ' wajib diisi.', 'error'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(lahir)) { showAlert('group-alert', 'Tanggal Lahir ' + no + ' wajib diisi.', 'error'); return; }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(EVENT_DATE_ISO)) {
+      const umur = ageAt(lahir, EVENT_DATE_ISO);
+      if (umur < MIN_KID_AGE || umur > MAX_KID_AGE) {
+        showAlert('group-alert', 'Tanggal Lahir ' + no + ' tidak sesuai. Pada hari acara (' + EVENT_DATE + ') usia anak harus ' + MIN_KID_AGE + ' sampai ' + MAX_KID_AGE + ' tahun.', 'error'); return;
+      }
+    }
+    kids.push({ nama, panggilan, sekolah, kelas, lahir, catatan });
+  }
+
+  const btn = document.getElementById('group-submit-btn');
+  btn.disabled = true; btn.textContent = '⏳ Mendaftarkan...';
+  clearAlert('group-alert');
+
+  try {
+    const url  = SCRIPT_URL + '?' + new URLSearchParams({
+      action: 'registergroup', phone, kota, pd,
+      adults: JSON.stringify(adults), kids: JSON.stringify(kids)
+    });
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      groupData = data;
+      showGroupResult(data);
+      loadQuota();
+    } else if (data.status === 'full') {
+      showAlert('group-alert', '⚠️ ' + (data.message || 'Kuota pendaftaran sudah penuh.'), 'warning');
+      btn.disabled = false; btn.textContent = 'Daftar Sekarang →';
+    } else if (data.status === 'duplicate') {
+      showAlert('group-alert',
+        '⚠️ ' + (data.message || 'Nomor HP ini sudah terdaftar.') + '<br>Gunakan tab <em>🔍 Cari QR</em> untuk melihat QR Code yang sudah ada.', 'warning');
+      btn.disabled = false; btn.textContent = 'Daftar Sekarang →';
+    } else {
+      showAlert('group-alert', '❌ ' + esc(data.message || 'Terjadi kesalahan, coba lagi.'), 'error');
+      btn.disabled = false; btn.textContent = 'Daftar Sekarang →';
+    }
+  } catch (e) {
+    showAlert('group-alert', '❌ Gagal terhubung ke server. Periksa koneksi internet Anda. Data yang sudah diisi tidak hilang, silakan tekan tombol lagi.', 'error');
+    btn.disabled = false; btn.textContent = 'Daftar Sekarang →';
+  }
+}
+
+function jenisBadgeHTML(r) {
+  const j = String(r.jenis || '').trim();
+  if (!j) return '';
+  const kid = j.toLowerCase() === 'anak';
+  const umur = kid && r.umur !== '' && r.umur !== undefined ? ', ' + esc(r.umur) + ' th' : '';
+  return '<span class="ticket-badge ' + (kid ? 'badge-kid' : 'badge-adult') + '">' + esc(j) + umur + '</span>';
+}
+
+function showGroupResult(data) {
+  const wrap = document.getElementById('group-people');
+  wrap.innerHTML = '';
+  data.people.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'person-card';
+    card.innerHTML =
+      '<div class="person-card-head">' + esc(p.nama) + '</div>' +
+      '<div class="person-card-body">' +
+        '<div><span class="pid-badge">' + esc(p.id) + '</span>' + jenisBadgeHTML(p) + '</div>' +
+        '<div class="qr-center" id="gqr-' + idx + '"></div>' +
+        (p.jenis === 'Anak' ? '<div class="res-detail" style="margin-bottom:0.3rem">Panggilan: <strong>' + esc(p.panggilan) + '</strong>  •  ' + esc(p.sekolah) + '  •  Kelas ' + esc(p.kelas) + '</div>' : '') +
+        '<div class="res-detail">' + esc(p.phone) + (p.kota ? '  •  ' + esc(p.kota) : '') + (p.pd ? '  •  ' + esc(p.pd) : '') + '</div>' +
+      '</div>';
+    wrap.appendChild(card);
+    new QRCode(document.getElementById('gqr-' + idx), {
+      text: p.id + '|' + p.nama + '|' + p.phone + '|' + (p.tiket || ''),
+      width: 190, height: 190,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+  const nA = data.people.filter(p => p.jenis === 'Dewasa').length;
+  const nK = data.people.length - nA;
+  document.getElementById('group-result-sub').textContent =
+    data.people.length + ' orang terdaftar (' + nA + ' dewasa' + (nK ? ', ' + nK + ' anak' : '') + ')';
+  applyRegMode();
+  document.getElementById('group-result').style.display = 'block';
+  setTimeout(() => document.getElementById('group-result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+// Satu pesan WhatsApp berisi semua nama dan ID, dengan satu link yang menampilkan semua QR (dicari lewat nomor HP)
+function shareGroupWA() {
+  const d = groupData;
+  if (!d) return;
+  const msg =
+    '✅ *QR Code ' + EVENT_TITLE + '*\n\n' +
+    d.people.map(p => '• ' + p.nama + ' (' + p.jenis + (p.jenis === 'Anak' && p.umur !== '' ? ', ' + p.umur + ' th' : '') + ') — `' + p.id + '`').join('\n') + '\n\n' +
+    '📌 Buka link berikut untuk menampilkan semua QR Code:\n' +
+    BASE_URL + '?id=' + d.phone + '\n\n' +
+    'Tunjukkan QR Code masing-masing saat registrasi hari H. GBU! 🙏';
+  window.open('https://wa.me/' + waNumber(d.phone) + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function printGroup() {
+  document.body.classList.add('print-group');
+  const done = () => { document.body.classList.remove('print-group'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
 
 // ============================================================
 //  SUBMIT FORM
@@ -966,6 +1358,16 @@ function resetForm() {
   document.getElementById('inline-result').style.display = 'none';
   document.getElementById('qrcode-main').innerHTML = '';
   clearAlert('form-alert');
+  // Pendaftaran dewasa + anak: kembali ke langkah 1 dengan isian kosong
+  groupData = null; groupStep = 1; ADULTS = 1; KIDS = 0; adultVals = []; kidVals = [];
+  ['g-phone','g-phone2','g-kota','g-pd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('group-result').style.display = 'none';
+  document.getElementById('group-people').innerHTML = '';
+  clearAlert('group-alert'); clearAlert('count-alert');
+  const gb = document.getElementById('group-submit-btn');
+  gb.disabled = false; gb.textContent = 'Daftar Sekarang →';
+  renderCounts();
+  applyRegMode();
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('submit-btn').textContent = 'Daftar Sekarang →';
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1011,7 +1413,7 @@ async function doLookup() {
           '</div>' +
           '<div style="padding:1.1rem;text-align:center">' +
             '<div style="font-family:monospace;font-size:1.2rem;font-weight:800;color:' + (isLunas ? 'var(--ok)' : 'var(--amber)') + ';letter-spacing:2px;margin-bottom:0.5rem">' + r.id + '</div>' +
-            ticketBadgeHTML(r.tiket || '') +
+            ticketBadgeHTML(r.tiket || '') + jenisBadgeHTML(r) +
             '<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.4rem;margin-bottom:0.9rem">' +
               r.phone + (r.kota ? '  •  ' + r.kota : '') + (r.pd ? '  •  ' + r.pd : '') +
             '</div>' +
@@ -1296,7 +1698,7 @@ async function checkAttendance(qrText) {
       div.style.background = 'var(--ok-light)'; div.style.borderColor = 'var(--ok-border)';
       div.innerHTML =
         '<div class="scan-name" style="color:var(--ok-dark)">✅ ' + data.nama + '</div>' +
-        '<div class="scan-detail">' + data.id + (t.label ? '  •  ' + t.label : '') + (data.pd ? '  •  ' + data.pd : '') + '</div>' +
+        '<div class="scan-detail">' + data.id + (data.jenis ? '  •  ' + esc(data.jenis) + (data.jenis === 'Anak' && data.umur ? ' ' + esc(data.umur) + ' th' : '') : '') + (data.panggilan ? '  •  Panggilan: ' + esc(data.panggilan) : '') + (t.label ? '  •  ' + t.label : '') + (data.pd ? '  •  ' + data.pd : '') + '</div>' +
         '<span class="scan-badge badge-ok">Hadir Tercatat  •  ' + data.checkin_time + '</span>';
     } else if (data.status === 'already') {
       div.style.background = 'var(--amber-light)'; div.style.borderColor = '#FAC775';
