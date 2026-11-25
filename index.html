@@ -168,8 +168,11 @@
   .group-summary { background: var(--green-light); border: 1.5px solid #F0C4B5; border-radius: 10px; padding: 0.7rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 700; color: var(--green-dark); }
   .link-btn { background: none; border: none; color: var(--green); font-weight: 700; font-size: 0.82rem; text-decoration: underline; cursor: pointer; white-space: nowrap; }
   .form-section-title { font-size: 0.8rem; font-weight: 800; color: var(--green-dark); text-transform: uppercase; letter-spacing: 0.5px; margin: 1.3rem 0 0.6rem; padding-bottom: 0.35rem; border-bottom: 2px solid #F3DDD0; }
-  .person-box { border: 1.5px solid #F3DDD0; background: #FFFAF6; border-radius: 12px; padding: 0.9rem 1rem 0.2rem; margin-bottom: 0.8rem; }
-  .person-box-title { font-weight: 800; font-size: 0.9rem; margin-bottom: 0.65rem; }
+  .person-box { border: 2px solid var(--green-dark); background: #FFFAF6; border-radius: 14px; overflow: hidden; margin-bottom: 1.5rem; box-shadow: 0 3px 10px rgba(122,21,32,0.14); }
+  .person-box.kid { border-color: var(--amber); box-shadow: 0 3px 10px rgba(138,86,0,0.18); }
+  .person-box-title { background: var(--green-dark); color: white; font-weight: 800; font-size: 0.95rem; padding: 0.6rem 1rem; letter-spacing: 0.3px; }
+  .person-box.kid .person-box-title { background: var(--amber); }
+  .person-box-body { padding: 1rem 1rem 0.25rem; }
   .group-result { display: none; background: white; border-radius: 16px; border: 2px solid var(--green); overflow: hidden; margin-top: 1.25rem; }
   .person-card { border: 2px solid var(--green); border-radius: 14px; overflow: hidden; margin-bottom: 1rem; background: white; break-inside: avoid; page-break-inside: avoid; }
   .person-card-head { background: var(--green-dark); color: white; padding: 0.75rem 1.1rem; text-align: center; font-weight: 700; font-size: 1rem; }
@@ -985,11 +988,12 @@ function buildPersonForms() {
 
   let a = ADULTS > 0 ? '<div class="form-section-title">Data Dewasa</div>' : '';
   for (let i = 0; i < ADULTS; i++) {
-    a += '<div class="person-box">' +
-      '<div class="person-box-title">Dewasa ' + (i + 1) + '</div>' +
+    a += '<div class="person-box adult">' +
+      '<div class="person-box-title">👤 Dewasa ' + (i + 1) + '</div>' +
+      '<div class="person-box-body">' +
       '<div class="field"><label>Nama Lengkap *</label>' +
       '<input type="text" id="adult-name-' + i + '" placeholder="Masukkan nama lengkap" maxlength="100" value="' + esc(adultVals[i] || '') + '"></div>' +
-      '</div>';
+      '</div></div>';
   }
   document.getElementById('adult-forms').innerHTML = a;
 
@@ -998,8 +1002,9 @@ function buildPersonForms() {
     k = '<div class="form-section-title">Data Anak</div>';
     for (let i = 0; i < KIDS; i++) {
       const v = kidVals[i] || { nama: '', panggilan: '', sekolah: '', kelas: '', lahir: '', catatan: '' };
-      k += '<div class="person-box">' +
-        '<div class="person-box-title">Anak ' + (i + 1) + '</div>' +
+      k += '<div class="person-box kid">' +
+        '<div class="person-box-title">🧒 Anak ' + (i + 1) + '</div>' +
+        '<div class="person-box-body">' +
         '<div class="field"><label>Nama Lengkap *</label>' +
         '<input type="text" id="kid-name-' + i + '" placeholder="Masukkan nama lengkap anak" maxlength="100" value="' + esc(v.nama) + '"></div>' +
         '<div class="field"><label>Nama Panggilan *</label>' +
@@ -1012,7 +1017,7 @@ function buildPersonForms() {
         '<input type="date" id="kid-dob-' + i + '"' + dobMax() + ' value="' + esc(v.lahir) + '"></div>' +
         '<div class="field"><label>Catatan untuk Panitia <span class="opt">(opsional)</span></label>' +
         '<input type="text" id="kid-note-' + i + '" placeholder="Contoh: alergi makanan" maxlength="200" value="' + esc(v.catatan) + '"></div>' +
-        '</div>';
+        '</div></div>';
     }
   }
   document.getElementById('kid-forms').innerHTML = k;
