@@ -415,6 +415,11 @@
         <p id="group-result-sub"></p>
       </div>
       <div class="ir-body">
+        <div class="reg-id-box" id="group-code-box" style="display:none">
+          <div class="reg-id-label">Kode Grup Anda</div>
+          <div class="reg-id-value" id="group-code-value"></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem">Simpan kode ini. Ketik di tab <em>Cari QR</em> untuk menampilkan semua QR Code dalam satu pendaftaran.</div>
+        </div>
         <p class="qr-hint" style="margin-bottom:1rem">Setiap orang punya QR Code sendiri. Screenshot atau cetak semuanya untuk absensi hari H. Naikkan kecerahan layar dan matikan mode gelap saat scan.</p>
         <div id="group-people"></div>
         <div class="action-row group-actions">
@@ -533,7 +538,7 @@
   <div id="tab-cari" style="display:none">
     <div class="lookup-wrap">
       <h3>🔍 Cari Status & QR Code</h3>
-      <p>Masukkan nomor WhatsApp atau ID registrasi untuk melihat status pembayaran dan QR Code Anda.</p>
+      <p>Masukkan nomor WhatsApp, ID registrasi, atau Kode Grup untuk melihat status pembayaran dan QR Code Anda.</p>
       <div class="search-row">
         <input type="text" id="lookup-input" placeholder="No. WhatsApp tanpa 0, atau nomor registrasi"
           maxlength="50" onkeydown="if(event.key==='Enter') doLookup()">
@@ -674,8 +679,8 @@ function renderConfig() {
   if (b2) b2.innerHTML = bankHTML;
 }
 
-const LOOKUP_TEXT_PAID = 'Masukkan nomor WhatsApp atau ID registrasi untuk melihat status pembayaran dan QR Code Anda.';
-const LOOKUP_TEXT_FREE = 'Masukkan nomor WhatsApp atau ID registrasi untuk melihat QR Code Anda.';
+const LOOKUP_TEXT_PAID = 'Masukkan nomor WhatsApp, ID registrasi, atau Kode Grup untuk melihat status pembayaran dan QR Code Anda.';
+const LOOKUP_TEXT_FREE = 'Masukkan nomor WhatsApp, ID registrasi, atau Kode Grup untuk melihat QR Code Anda.';
 
 // Menyesuaikan tampilan dengan mode acara. Dipanggil setiap kali FREE_EVENT dibaca dari server,
 // jadi berlaku dua arah (gratis -> berbayar maupun sebaliknya).
@@ -713,7 +718,7 @@ function applyIdPrefix(prefix) {
   const contoh1 = prefix + '0001';
   const contoh2 = prefix + '0002';
   const set = (id, text) => { const el = document.getElementById(id); if (el) el.placeholder = text; };
-  set('lookup-input', 'No. WhatsApp tanpa 0, atau nomor registrasi, contoh ' + contoh1);
+  set('lookup-input', 'No. WhatsApp tanpa 0, nomor registrasi, atau Kode Grup (contoh G' + contoh1 + ')');
   set('manual-id',    'Contoh: ' + contoh1);
   set('verify-id',    'ID Registrasi, contoh ' + contoh2);
 }
@@ -1120,6 +1125,9 @@ function showGroupResult(data) {
   const nK = data.people.length - nA;
   document.getElementById('group-result-sub').textContent =
     data.people.length + ' orang terdaftar (' + [nA ? nA + ' dewasa' : '', nK ? nK + ' anak' : ''].filter(Boolean).join(', ') + ')';
+  const gcb = document.getElementById('group-code-box');
+  if (data.kodeGrup) { document.getElementById('group-code-value').textContent = data.kodeGrup; gcb.style.display = ''; }
+  else gcb.style.display = 'none';
   applyRegMode();
   document.getElementById('group-result').style.display = 'block';
   setTimeout(() => document.getElementById('group-result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -1132,8 +1140,9 @@ function shareGroupWA() {
   const msg =
     '✅ *QR Code ' + EVENT_TITLE + '*\n\n' +
     d.people.map(p => '• ' + p.nama + ' (' + p.jenis + (p.jenis === 'Anak' && p.umur !== '' ? ', ' + p.umur + ' th' : '') + ') — `' + p.id + '`').join('\n') + '\n\n' +
+    '🔑 *Kode Grup:* `' + d.kodeGrup + '`\n\n' +
     '📌 Buka link berikut untuk menampilkan semua QR Code:\n' +
-    BASE_URL + '?id=' + d.phone + '\n\n' +
+    BASE_URL + '?id=' + d.kodeGrup + '\n\n' +
     'Tunjukkan QR Code masing-masing saat registrasi hari H. GBU! 🙏';
   window.open('https://wa.me/' + waNumber(d.phone) + '?text=' + encodeURIComponent(msg), '_blank');
 }
